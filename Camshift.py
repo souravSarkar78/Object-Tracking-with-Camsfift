@@ -90,6 +90,10 @@ while True:
         cv2.destroyWindow('roi')
         
 
+    # Show the output
     cv2.imshow(windowname,output)
     if cv2.waitKey(1) == ord('q'):
         break
+
+cap.release()
+cv2.destroyAllWindows()
