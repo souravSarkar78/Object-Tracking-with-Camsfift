@@ -2,8 +2,6 @@
 import cv2
 import numpy as np
 
-
-
 # Naming the Output window
 windowname = 'Result'
 cv2.namedWindow(windowname)
@@ -14,61 +12,60 @@ output = None
 
 x, y, w, h = 0, 0, 0, 0
 
-point_saved = False
-counter = 0
+first_point_saved = False
+second_point_saved = False
 track_window = (x, y, w, h)
 can_track = False
 
 def click_event(event, px, py, flags, param):
-    global x, y, w, h, point_saved, track_window, counter, can_track, output
+    global x, y, w, h, first_point_saved,second_point_saved, track_window, can_track, output
 
+    # Left mouse button release event
     if event == cv2.EVENT_LBUTTONUP:
-        if point_saved:
+        if first_point_saved:
             w = px-x
             h = py-y
             track_window = (x, y, w, h)
             print(x, y, w, h)
-            point_saved = False
-            counter = 2
+            first_point_saved = False
+            second_point_saved = True
         else:
             x = px
             y = py
-            point_saved = True
+            first_point_saved = True
             can_track = False
-            counter = 1
             
 
-        
+    # Right mouse button press event
     if event == cv2.EVENT_RBUTTONDOWN:
         can_track = False
 cv2.setMouseCallback(windowname, click_event)  # Start the mouse event
 
 
 
-# initialize tracker frame
+# initialize tracker 
 
 def initialize(frame, track_window):
     x, y, w, h = track_window
     # set up the ROI for tracking
     roi = frame[y:y+h, x:x+w]
     hsv_roi =  cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-    mask = cv2.inRange(hsv_roi, np.array((0., 60.,32.)), np.array((180.,255.,255.)))
-    roi_hist = cv2.calcHist([hsv_roi],[0],mask,[180],[0,180])
-    cv2.normalize(roi_hist,roi_hist,0,255,cv2.NORM_MINMAX)
+    roi_hist = cv2.calcHist([hsv_roi],[0],None,[180],[0,180])
+    roi_hist = cv2.normalize(roi_hist,roi_hist,0,255,cv2.NORM_MINMAX)
 
     return roi_hist, roi
 
-# Setup the termination criteria, either 10 iteration or move by atleast 1 pt
+# Setup the termination criteria
 term_crit = ( cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1 )
 
 while True:
     ret, frame = cap.read()
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     
-    # Check id 2nd point is also selected then reinitialize everything
-    if counter == 2:
+    # Check if 2nd point is also saved then initialize the tracker
+    if second_point_saved:
         roi_hist, roi = initialize(frame, track_window)
-        counter = 0
+        second_point_saved = False
         can_track = True
     
     # Start tracking
@@ -79,13 +76,14 @@ while True:
         # Draw it on image
         pts = cv2.boxPoints(ret)
         pts = np.int0(pts)
+        print(ret)
         print(track_window)
         cv2.imshow('roi', roi)
         output = cv2.polylines(frame,[pts],True, 255,2)
         
     else:
         output = frame
-        if counter == 1:
+        if first_point_saved:
             cv2.circle(output, (x, y), 3, (0, 255, 0), -1)
         cv2.destroyWindow('roi')
         
